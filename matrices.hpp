@@ -11,8 +11,14 @@ namespace sal
 
 	using size_type = unsigned int;
 
+/*	template<typename TT, size_type N>
+	class SquareMatrix;*/
+
+	template<typename T, size_type Y, size_type X>
+	class Matrix;
+
 	template<typename TT, size_type N>
-	class SquareMatrix;
+	using SquareMatrix = Matrix<TT, N, N>;
 
 
 	template<typename T, size_type Y, size_type X>
@@ -74,10 +80,9 @@ namespace sal
 		//
 		
 		template<typename T2, size_type Z>
-		auto operator*(const Matrix<T2, X, Z>& other) -> Matrix<decltype((data[0][0])*other.data[0][0]), Y, Z>
+		auto operator*(const Matrix<T2, X, Z>& other) -> Matrix<decltype((data[0][0])*other.data[0][0]), Y, Z> const
 		{
 
-			std::cout << "operator* auto" << std::endl;
 			Matrix<decltype((data[0][0])*other.data[0][0]), Y, Z> result;
 			for(auto y=0; y < Y; y++)
 			{
@@ -93,11 +98,11 @@ namespace sal
 			return result;
 		}
 
-		//
+/*		//
 		//	Getting square matrix by multiplying if possible
 		//
 
-		SquareMatrix<T, Y> operator*(const Matrix<T, X, Y>& other)
+		SquareMatrix<T, Y> operator*(const Matrix<T, X, Y>& other) const
 		{
 			std::cout << "operator sqr" << std::endl;
 			SquareMatrix<T, Y> result;
@@ -106,7 +111,7 @@ namespace sal
 					for(auto x=0; x < X; x++)
 						result(y, z)+=(*this)(y, x)*(other(x, z));
 			return result;
-		}
+		}*/
 
 		//
 		//	Convert matrix to double - useful for determinate or inverse
@@ -164,39 +169,6 @@ namespace sal
 	};
 
 	
-	template<typename T, size_type N>
-	class SquareMatrix : public Matrix<T, N, N>
-	{
-	public:
-		SquareMatrix() : Matrix<T, N, N>()
-		{
-			
-		}
-
-		SquareMatrix(const Matrix<T, N, N>& matrix)
-		{
-			for(auto y=0; y < N; y++)
-			{
-				for(auto x=0; x < N; x++)
-				{
-					this->at(y,x)=matrix.at(y,x);
-				}
-			}
-		}
-		SquareMatrix<double, N> to_double() const
-		{
-			SquareMatrix<double, N> result;
-			for(auto y=0; y < N; y++)
-				for(auto x=0; x < N; x++)
-					result(y, x)=static_cast<double>((*this)(y, x));
-			return result;	
-		}
-
-	protected:
-			
-
-	};
-
 	//
 	//	Get I matrix of given size and type
 	//
@@ -213,7 +185,7 @@ namespace sal
 	}
 
 	//
-	//	Determinate for square matrices
+	//	Determinant for square matrices
 	//	Gauss algorithm
 	//
 	
@@ -223,8 +195,6 @@ namespace sal
 		const double epsilon=0.0000001f;
 		auto copy=matrix.to_double();
 		double result=1;
-		std::cout << matrix << std::endl;
-		std::cout << copy << std::endl;
 		for(auto n=0; n < N-1; n++)
 		{
 			auto diagonal_value=copy(n, n);
@@ -242,24 +212,37 @@ namespace sal
 					double coefficient=to_divide/copy.at(n, n);
 					for(auto x=n; x < N; x++)
 					{
-						copy(y, x)-=copy(y, x)*coefficient;
+						copy(y, x)-=copy(n, x)*coefficient;
 					}
 				}
 			}
 		}
 		result*=copy(N-1, N-1);
-		std::cout << copy << std::endl;
-		std::cout << "==" << std::endl;
 		return static_cast<T>(result);
 		
 	}
 
-	template<typename T, size_type N>
-	T det(const Matrix<T, N, N>& matrix)
+	//
+	//	Faster 2x2 determinant
+	//
+
+	template<typename T>
+	T det(const SquareMatrix<T, 2>& matrix)
 	{
-		static_assert("false", "not working yet");
-		return det(matrix * IdentityMatrix<T, N>());
+		return matrix(0,0)*matrix(1,1)-matrix(1,0)*matrix(0,1);
 	}
+	
+	//
+	//	Determinate for 3x3 matrix
+	//	Sarrus' rule
+	//
+
+	template<typename T>
+	T det(const SquareMatrix<T, 3>& matrix)
+	{
+		return matrix(0,0)*matrix(1,1)*matrix(2,2)+matrix(2,0)*matrix(0,1)*matrix(1, 2)+matrix(0,2)*matrix(1,0)*matrix(2,1)-matrix(0,2)*matrix(1,1)*matrix(2,0)-matrix(0,0)*matrix(2,1)*matrix(1,2)-matrix(2,2)*matrix(1,0)*matrix(0,1);
+	}
+
 	
 }
 
