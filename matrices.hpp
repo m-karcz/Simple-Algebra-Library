@@ -11,14 +11,17 @@ namespace sal
 
 	using size_type = unsigned int;
 
-/*	template<typename TT, size_type N>
-	class SquareMatrix;*/
-
 	template<typename T, size_type Y, size_type X>
 	class Matrix;
 
-	template<typename TT, size_type N>
-	using SquareMatrix = Matrix<TT, N, N>;
+	template<typename T, size_type N>
+	using SquareMatrix = Matrix<T, N, N>;
+
+	template<typename T, size_type N>
+	using Vector = Matrix<T, N, 1>;
+
+	template<typename T, size_type N>
+	using VectorT = Matrix<T, 1, N>;	
 
 
 	template<typename T, size_type Y, size_type X>
@@ -59,10 +62,20 @@ namespace sal
 		}
 
 		//
+		//	Casting 1x1 matrix/vector to its value
+		//
+
+		explicit operator T() const
+		{
+			static_assert(X==Y && X==1, "You can cast to value only 1x1 matrix/vector");
+			return (*this)(0, 0);	
+		}
+
+		//
 		//	Get transposed matrix
 		//
 
-		Matrix<T, X, Y> get_T()
+		Matrix<T, X, Y> get_T() const
 		{
 			Matrix<T, Y, X> transposed;
 			for(auto y=0; y < Y ; y++)
@@ -76,11 +89,11 @@ namespace sal
 		}
 
 		//
-		//	Simple multiplying matrix //TODO make more universal
+		//	Simple multiplying matrix
 		//
 		
 		template<typename T2, size_type Z>
-		auto operator*(const Matrix<T2, X, Z>& other) -> Matrix<decltype((data[0][0])*other.data[0][0]), Y, Z> const
+		auto operator*(const Matrix<T2, X, Z>& other) const
 		{
 
 			Matrix<decltype((data[0][0])*other.data[0][0]), Y, Z> result;
@@ -114,6 +127,65 @@ namespace sal
 		}*/
 
 		//
+		//	Simple adding matrices/vectors
+		//
+
+		auto operator+(const Matrix<T, Y, X>& other) const
+		{
+			Matrix<T, Y, X> result;
+			for(auto y=0; y < Y; y++)
+			{
+				for(auto x=0; x < X; x++)
+				{
+					result(y, x) = (*this)(y, x) + other(y, x);
+				}
+			}
+			return result;
+		}
+
+		auto& operator+=(const Matrix<T, Y, X>& other)
+		{
+			for(auto y=0; y < Y; y++)
+			{
+				for(auto x=0; x < X; x++)
+				{
+					(*this)(y,x) += other(y, x);
+				}
+			}
+			return *this;
+		}
+
+		//
+		//	Simply subtracting matrices/vectors
+		//
+
+		auto operator-(const Matrix<T, Y, X>& other) const
+		{
+			Matrix<T, Y, X> result;
+			for(auto y=0; y < Y; y++)
+			{
+				for(auto x=0; x < X; x++)
+				{
+					result(y, x) = (*this)(y, x) - other(y, x);
+				}
+			}
+			return result;
+		}
+
+
+		auto& operator-=(const Matrix<T, Y, X>& other)
+		{
+			for(auto y=0; y < Y; y++)
+			{
+				for(auto x=0; x < X; x++)
+				{
+					(*this)(y,x) -= other(y, x);
+				}
+			}
+			return *this;
+		}
+
+		//
 		//	Convert matrix to double - useful for determinate or inverse
 		//
 
@@ -125,8 +197,7 @@ namespace sal
 					result(y,x)=static_cast<double>(this->data[y][x]);
 			return result;
 		}
-			
-		
+
 
 	protected:
 			
@@ -167,6 +238,21 @@ namespace sal
 
 	
 	};
+
+	template<typename T2, typename T, size_type Y, size_type X>
+	Matrix<T2, Y, X> matrix_cast(const Matrix<T, Y, X>& matrix)
+	{
+		Matrix<T2, Y, X> result;
+		for(auto y=0; y < Y; y++)
+		{
+			for(auto x=0; x < X; x++)
+			{
+				result(y, x)=static_cast<T2>(matrix(y, x));
+			}
+		}
+		return result;
+
+	}
 
 	
 	//
@@ -243,6 +329,63 @@ namespace sal
 		return matrix(0,0)*matrix(1,1)*matrix(2,2)+matrix(2,0)*matrix(0,1)*matrix(1, 2)+matrix(0,2)*matrix(1,0)*matrix(2,1)-matrix(0,2)*matrix(1,1)*matrix(2,0)-matrix(0,0)*matrix(2,1)*matrix(1,2)-matrix(2,2)*matrix(1,0)*matrix(0,1);
 	}
 
+	//
+	//	Inverse of matrix
+	//	Gauss-Jordan method
+	//
 	
+	template<typename T2=double, typename T, size_type N>
+	SquareMatrix<T2, N> inverse(const SquareMatrix<T, N>& matrix)
+	{
+		SquareMatrix<double, N> copy=matrix_cast<double>(matrix);
+		auto inverted=IdentityMatrix<double, N>();
+		const double epsilon=0.000000000f;
+		for(auto n=0; n < N-1; n++)
+		{
+			auto diagonal_value=copy(n, n);
+			for(auto y=n+1; y < N; y++)
+			{
+				double to_divide=copy(y, n);
+				if(std::abs(to_divide) > epsilon)
+				{
+					double coefficient=to_divide/diagonal_value;
+					for(auto x=0; x < N; x++)
+					{
+						copy(y, x)-=copy(n, x)*coefficient;
+						inverted(y, x)-=inverted(y, x)*coefficient;
+					}
+
+				}
+			}
+		}
+		for(auto n=N-1; n > 0; n--)
+		{
+			auto diagonal_value=copy(n, n);
+			for(auto y=n-1; y > 0; y--)
+			{
+				double to_divide=copy(y, n);
+				if(std::abs(to_divide) > epsilon)
+				{
+					double coefficient=to_divide/diagonal_value;
+					for(auto x=0; x < N; x++)
+					{
+						copy(y, x)-=copy(n, x)*coefficient;
+						inverted(y, x)-=inverted(n, x)*coefficient;
+					}
+				}
+			}
+		}
+		for(auto y = 0; y < N; y++)
+		{
+			for(auto x = 0; x < N; x++)
+			{
+				inverted(y, x)=inverted(y, x) / copy(y, y);
+			}
+		}
+		std::cout << inverted << std::endl;
+		return matrix_cast<T2>(inverted);
+
+	}
+		
 }
 
