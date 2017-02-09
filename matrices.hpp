@@ -96,7 +96,7 @@ namespace sal
 		auto operator*(const Matrix<T2, X, Z>& other) const
 		{
 
-			Matrix<decltype((data[0][0])*other.data[0][0]), Y, Z> result;
+			Matrix<decltype((data[0][0])*other(0,0)), Y, Z> result;
 			for(auto y=0; y < Y; y++)
 			{
 				for(auto z=0; z < Z; z++)
@@ -352,7 +352,7 @@ namespace sal
 					for(auto x=0; x < N; x++)
 					{
 						copy(y, x)-=copy(n, x)*coefficient;
-						inverted(y, x)-=inverted(y, x)*coefficient;
+						inverted(y, x)-=inverted(n, x)*coefficient;
 					}
 
 				}
@@ -361,7 +361,7 @@ namespace sal
 		for(auto n=N-1; n > 0; n--)
 		{
 			auto diagonal_value=copy(n, n);
-			for(auto y=n-1; y > 0; y--)
+			for(int y=n-1; y >= 0; y--)
 			{
 				double to_divide=copy(y, n);
 				if(std::abs(to_divide) > epsilon)
