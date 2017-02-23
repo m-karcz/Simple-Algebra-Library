@@ -231,7 +231,7 @@ namespace MyAlgLib
 			Matrix<T, Y, X> result;
 			for(int y=0; y < Y; y++)
 			{
-				for(int x=0; x < Y; x++)
+				for(int x=0; x < X; x++)
 				{
 					result(y, x)=multiplier*matrix(y,x);
 				}
