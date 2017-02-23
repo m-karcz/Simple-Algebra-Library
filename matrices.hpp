@@ -6,7 +6,7 @@
 #include <initializer_list>
 #include <cmath>
 
-namespace sal
+namespace MyAlgLib
 {
 
 	using size_type = unsigned int;
@@ -22,6 +22,9 @@ namespace sal
 
 	template<typename T, size_type N>
 	using VectorT = Matrix<T, 1, N>;	
+
+	template <typename T1, typename T2, size_type Y, size_type X>
+	Matrix<T2, Y, X> matrix_cast(const Matrix<T1, Y, X>&);
 
 
 	template<typename T, size_type Y, size_type X>
@@ -41,23 +44,30 @@ namespace sal
 			}
 		}
 
-		const T& operator()(auto y, auto x) const
+		template<typename I>	
+		const T& operator()(I y, I x) const
 		{
+			static_assert(std::is_integral<I>::value, "Index type is not integral");
 			return data[y][x];
 		}
-
-		T& operator()(auto y, auto x)
+		template<typename I>
+		T& operator()(I y, I x)
 		{
+			static_assert(std::is_integral<I>::value, "Index type is not integral");
 			return const_cast<T&>(static_cast<const Matrix<T, Y, X>*>(this)->operator()(y, x));
 		}
-
-		const T& at(auto y, auto x) const
+		
+		template<typename I>
+		const T& at(I y, I x) const
 		{
+			static_assert(std::is_integral<I>::value, "Index type is not integral");
 			return data[y][x];	
 		}
-
-		T& at(auto y, auto x)
+		
+		template<typename I>
+		T& at(I y, I x)
 		{
+			static_assert(std::is_integral<I>::value, "Index type is not integral");
 			return const_cast<T&>(static_cast<const Matrix<T, Y, X>*>(this)->at(y,x));
 		}
 
@@ -74,6 +84,12 @@ namespace sal
 		//
 		//	Get transposed matrix
 		//
+		
+
+		operator Matrix<double, X, Y>() const
+		{
+			return matrix_cast<double>(*this);
+		}
 
 		Matrix<T, X, Y> get_T() const
 		{
@@ -95,15 +111,15 @@ namespace sal
 		template<typename T2, size_type Z>
 		auto operator*(const Matrix<T2, X, Z>& other) const
 		{
-
-			Matrix<decltype((data[0][0])*other(0,0)), Y, Z> result;
+			
+			Matrix<decltype(other(0,0)*(*this)(0,0)), Y, Z> result;
 			for(auto y=0; y < Y; y++)
 			{
 				for(auto z=0; z < Z; z++)
 				{
 					for(auto x=0; x < X; x++)
 					{
-						result(y,z)+=data[y][x]*(other(y,z));	
+						result(y,z)+=data[y][x]*(other(x,z));	
 					}
 
 				}
@@ -142,6 +158,9 @@ namespace sal
 			}
 			return result;
 		}
+
+		
+
 
 		auto& operator+=(const Matrix<T, Y, X>& other)
 		{
@@ -194,7 +213,7 @@ namespace sal
 			Matrix<double, Y, X> result;
 			for(auto y=0; y < Y; y++)
 				for(auto x=0; x < X; x++)
-					result(y,x)=static_cast<double>(this->data[y][x]);
+					result(y,x)=static_cast<double>((*this)(y,x));
 			return result;
 		}
 
@@ -205,15 +224,16 @@ namespace sal
 		//	Multiplying by scalar
 		//
 
-		template<typename N>
-		friend auto operator*(const N& multiplier, const Matrix<T, Y, X>& matrix) -> Matrix<decltype(multiplier*matrix.data[0][0]), Y, X>
+		//template<typename N>
+		friend auto operator*(double multiplier, const Matrix<T, Y, X>& matrix) -> Matrix<T, Y, X>
 		{
-			Matrix<decltype(multiplier*matrix.data[0][0]), Y, X> result;
+			//static_assert(std::is_arithmetic<N>::value, "Scalar should be arithmetic type");
+			Matrix<T, Y, X> result;
 			for(int y=0; y < Y; y++)
 			{
 				for(int x=0; x < Y; x++)
 				{
-					result.at(y, x)=multiplier*matrix.data[y][x];
+					result(y, x)=multiplier*matrix(y,x);
 				}
 			}
 			return result;
@@ -339,7 +359,7 @@ namespace sal
 	{
 		SquareMatrix<double, N> copy=matrix_cast<double>(matrix);
 		auto inverted=IdentityMatrix<double, N>();
-		const double epsilon=0.000000000f;
+		const double epsilon=0.000001f;
 		for(auto n=0; n < N-1; n++)
 		{
 			auto diagonal_value=copy(n, n);
@@ -382,9 +402,19 @@ namespace sal
 				inverted(y, x)=inverted(y, x) / copy(y, y);
 			}
 		}
-		std::cout << inverted << std::endl;
 		return matrix_cast<T2>(inverted);
 
+	}
+
+	template <typename T, size_type N>
+	T length(Vector<T, N>& vector)
+	{
+		T sum=0;
+		for(int i=0; i < N; i++)
+		{
+			sum+=vector(i,0)*vector(i,0);
+		}
+		return static_cast<T>(std::sqrt(static_cast<double>(sum)));
 	}
 		
 }
